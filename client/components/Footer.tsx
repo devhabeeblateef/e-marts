@@ -1,6 +1,7 @@
 import { FaFacebook } from '@react-icons/all-files/fa/FaFacebook';
 import { FaInstagram } from '@react-icons/all-files/fa/FaInstagram';
 import { Music2, AtSign } from 'lucide-react';
+
 import Image from 'next/image';
 
 export function Footer() {
