@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import { SidebarFiltersProps } from '@/types/sidebar';
+import { VALIDATION_MESSAGES } from '@/lib/constants';
 
 export function SidebarFilters({
   categories,
@@ -29,44 +31,54 @@ export function SidebarFilters({
     selectedCategories.length > 0 || selectedDiscount !== 'all' || hasCustomPrice;
 
   const validatePriceInputs = (nextMin: string, nextMax: string) => {
-    const parsedMin = nextMin.trim() === '' ? availableMin : Number(nextMin);
-    const parsedMax = nextMax.trim() === '' ? availableMax : Number(nextMax);
+    try {
+      const parsedMin = nextMin.trim() === '' ? availableMin : Number(nextMin);
+      const parsedMax = nextMax.trim() === '' ? availableMax : Number(nextMax);
 
-    let nextMinError = '';
-    let nextMaxError = '';
+      let nextMinError = '';
+      let nextMaxError = '';
 
-    if (!Number.isFinite(parsedMin)) {
-      nextMinError = 'Minimum price must be a valid number.';
-    } else if (parsedMin < availableMin) {
-      nextMinError = `Minimum price is ₦${availableMin.toLocaleString()}.`;
+      if (!Number.isFinite(parsedMin)) {
+        nextMinError = VALIDATION_MESSAGES.INVALID_MIN_PRICE;
+      } else if (parsedMin < availableMin) {
+        nextMinError = VALIDATION_MESSAGES.MIN_LESS_THAN_AVAILABLE(availableMin);
+      }
+
+      if (!Number.isFinite(parsedMax)) {
+        nextMaxError = VALIDATION_MESSAGES.INVALID_MAX_PRICE;
+      } else if (parsedMax > availableMax) {
+        nextMaxError = VALIDATION_MESSAGES.MAX_MORE_THAN_AVAILABLE(availableMax);
+      }
+
+      if (!nextMinError && !nextMaxError && parsedMin > parsedMax) {
+        nextMinError = VALIDATION_MESSAGES.MIN_GREATER_THAN_MAX;
+        nextMaxError = VALIDATION_MESSAGES.MAX_LESS_THAN_MIN;
+      }
+
+      setMinError(nextMinError);
+      setMaxError(nextMaxError);
+
+      return nextMinError === '' && nextMaxError === '';
+    } catch (error) {
+      console.error('Error validating price inputs:', error);
+      setMinError('An error occurred while validating prices');
+      return false;
     }
-
-    if (!Number.isFinite(parsedMax)) {
-      nextMaxError = 'Maximum price must be a valid number.';
-    } else if (parsedMax > availableMax) {
-      nextMaxError = `Maximum price is ₦${availableMax.toLocaleString()}.`;
-    }
-
-    if (!nextMinError && !nextMaxError && parsedMin > parsedMax) {
-      nextMinError = 'Minimum price cannot be greater than maximum price.';
-      nextMaxError = 'Maximum price cannot be less than minimum price.';
-    }
-
-    setMinError(nextMinError);
-    setMaxError(nextMaxError);
-
-    return nextMinError === '' && nextMaxError === '';
   };
 
   const handleSavePrice = () => {
-    const parsedMin = draftMin.trim() === '' ? availableMin : Number(draftMin);
-    const parsedMax = draftMax.trim() === '' ? availableMax : Number(draftMax);
+    try {
+      const parsedMin = draftMin.trim() === '' ? availableMin : Number(draftMin);
+      const parsedMax = draftMax.trim() === '' ? availableMax : Number(draftMax);
 
-    if (!validatePriceInputs(draftMin, draftMax)) {
-      return;
+      if (!validatePriceInputs(draftMin, draftMax)) {
+        return;
+      }
+
+      onPriceChange(parsedMin, parsedMax);
+    } catch (error) {
+      console.error('Error saving price filter:', error);
     }
-
-    onPriceChange(parsedMin, parsedMax);
   };
 
   const handleClearPrice = () => {
@@ -74,7 +86,11 @@ export function SidebarFilters({
   };
 
   const handleClearAll = () => {
-    onClearAll();
+    try {
+      onClearAll();
+    } catch (error) {
+      console.error('Error clearing filters:', error);
+    }
   };
 
   return (

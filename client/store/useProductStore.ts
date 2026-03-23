@@ -17,7 +17,6 @@ interface ProductStoreState {
   isSortOpen: boolean;
   isMobileFiltersOpen: boolean;
   toggleCategory: (category: string, checked: boolean) => void;
-  removeCategory: (category: string) => void;
   setDiscount: (discount: DiscountFilter) => void;
   setPriceRange: (min: number, max: number) => void;
   setSortBy: (sortBy: SortOption) => void;
@@ -60,11 +59,6 @@ export const useProductStore = create<ProductStoreState>((set, get) => ({
         : current.filter((item) => item !== category),
     });
   },
-  removeCategory: (category) => {
-    set({
-      selectedCategories: get().selectedCategories.filter((item) => item !== category),
-    });
-  },
   setDiscount: (selectedDiscount) => set({ selectedDiscount }),
   setPriceRange: (min, max) => {
     const [defaultMin, defaultMax] = get().defaultPriceRange;
@@ -90,51 +84,3 @@ export const useProductStore = create<ProductStoreState>((set, get) => ({
   addToCart: () => set({ cartCount: get().cartCount + 1 }),
 }));
 
-const getEffectivePrice = (product: Product) =>
-  product.sale_price > 0 ? product.sale_price : product.price;
-
-const hasDiscount = (product: Product) =>
-  product.sale_price > 0 && product.sale_price < product.price;
-
-export const selectCategories = (state: ProductStoreState) => {
-  return Array.from(new Set(state.products.map((product) => product.category))).sort();
-};
-
-export const selectFilteredProducts = (state: ProductStoreState) => {
-  const query = state.searchQuery.trim().toLowerCase();
-
-  const filtered = state.products.filter((product) => {
-    const effectivePrice = getEffectivePrice(product);
-
-    const categoryOk =
-      state.selectedCategories.length === 0 ||
-      state.selectedCategories.includes(product.category);
-
-    const discountOk =
-      state.selectedDiscount === 'all' ||
-      (state.selectedDiscount === 'with' && hasDiscount(product)) ||
-      (state.selectedDiscount === 'without' && !hasDiscount(product));
-
-    const priceOk =
-      effectivePrice >= state.priceRange[0] && effectivePrice <= state.priceRange[1];
-
-    const searchOk =
-      query.length === 0 ||
-      product.name.toLowerCase().includes(query) ||
-      product.category.toLowerCase().includes(query) ||
-      product.sub_category.toLowerCase().includes(query) ||
-      product.tags.some((tag) => tag.toLowerCase().includes(query));
-
-    return categoryOk && discountOk && priceOk && searchOk;
-  });
-
-  if (state.sortBy === 'highest-price') {
-    return [...filtered].sort((a, b) => getEffectivePrice(b) - getEffectivePrice(a));
-  }
-
-  if (state.sortBy === 'newest') {
-    return [...filtered].reverse();
-  }
-
-  return [...filtered].sort((a, b) => getEffectivePrice(a) - getEffectivePrice(b));
-};

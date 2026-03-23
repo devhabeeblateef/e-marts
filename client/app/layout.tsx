@@ -9,7 +9,6 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        // E-mart Logo
         url: '/emart-logo.svg',
       },
     ]}

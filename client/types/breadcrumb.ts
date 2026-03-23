@@ -1,3 +1,3 @@
-interface BreadcrumbProps {
+export interface BreadcrumbProps {
   selectedCategories: string[];
 }

@@ -4,15 +4,18 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { SidebarFilters } from '@/components/SidebarFilters';
+import { Footer } from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
 import { Breadcrumb } from '@/components/BreadCrumb';
+import { ProductGridSkeleton } from '@/components/SkeletonLoader';
 import { ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { SORT_OPTIONS, DISCOUNT_OPTIONS, SEARCH_CONFIG, MESSAGES } from '@/lib/constants';
+import { getEffectivePrice, hasDiscount, searchScoring } from '@/lib/product-utils';
+import type { DiscountFilterOption } from '@/types/sidebar';
 
-// Zustand Store
 import { useProductStore } from '@/store/useProductStore';
-
-const SORT_OPTIONS = ['lowest-price', 'highest-price', 'newest'] as const;
-const DISCOUNT_OPTIONS = ['all', 'with', 'without'] as const;
 
 type SearchSuggestion = {
   id: string;
@@ -66,9 +69,9 @@ export default function Home() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const hasHydratedFromUrl = useRef(false);
   const lastSyncedQueryString = useRef('');
   const [searchInput, setSearchInput] = useState('');
+  const [isHydrating, setIsHydrating] = useState(true);
 
   const products = useProductStore((state) => state.products);
   const selectedCategories = useProductStore((state) => state.selectedCategories);
@@ -80,7 +83,6 @@ export default function Home() {
   const cartCount = useProductStore((state) => state.cartCount);
   const isSortOpen = useProductStore((state) => state.isSortOpen);
   const isMobileFiltersOpen = useProductStore((state) => state.isMobileFiltersOpen);
-
 
   const setSortBy = useProductStore((state) => state.setSortBy);
   const setIsSortOpen = useProductStore((state) => state.setIsSortOpen);
@@ -98,59 +100,43 @@ export default function Home() {
   }, [products]);
 
   const searchSuggestions = useMemo<SearchSuggestion[]>(() => {
-    const query = searchInput.trim().toLowerCase();
+    try {
+      const query = searchInput.trim().toLowerCase();
 
-    if (query.length < 2) {
+      if (query.length < SEARCH_CONFIG.MIN_QUERY_LENGTH) {
+        return [];
+      }
+
+      return products
+        .map((product) => {
+          const score = searchScoring(
+            product.name.toLowerCase(),
+            product.category.toLowerCase(),
+            product.sub_category.toLowerCase(),
+            product.vendor_name.toLowerCase(),
+            product.tags,
+            query
+          );
+
+          if (score === 0) {
+            return null;
+          }
+
+          return {
+            id: product.id,
+            label: product.name,
+            meta: `${product.category} · ${product.sub_category}`,
+            score,
+          };
+        })
+        .filter((suggestion): suggestion is SearchSuggestion & { score: number } => suggestion !== null)
+        .sort((left, right) => right.score - left.score || left.label.localeCompare(right.label))
+        .slice(0, SEARCH_CONFIG.MAX_SUGGESTIONS)
+        .map(({ id, label, meta }) => ({ id, label, meta }));
+    } catch (error) {
+      console.error('Error generating search suggestions:', error);
       return [];
     }
-
-    return products
-      .map((product) => {
-        const productName = product.name.toLowerCase();
-        const category = product.category.toLowerCase();
-        const subCategory = product.sub_category.toLowerCase();
-        const vendor = product.vendor_name.toLowerCase();
-        const matchingTag = product.tags.find((tag) => tag.toLowerCase().includes(query));
-
-        let score = 0;
-
-        if (productName === query) {
-          score += 100;
-        } else if (productName.startsWith(query)) {
-          score += 60;
-        } else if (productName.includes(query)) {
-          score += 40;
-        }
-
-        if (category.startsWith(query) || subCategory.startsWith(query)) {
-          score += 25;
-        } else if (category.includes(query) || subCategory.includes(query)) {
-          score += 15;
-        }
-
-        if (vendor.includes(query)) {
-          score += 10;
-        }
-
-        if (matchingTag) {
-          score += 12;
-        }
-
-        if (score === 0) {
-          return null;
-        }
-
-        return {
-          id: product.id,
-          label: product.name,
-          meta: `${product.category} · ${product.sub_category}`,
-          score,
-        };
-      })
-      .filter((suggestion): suggestion is SearchSuggestion & { score: number } => suggestion !== null)
-      .sort((left, right) => right.score - left.score || left.label.localeCompare(right.label))
-      .slice(0, 6)
-      .map(({ id, label, meta }) => ({ id, label, meta }));
   }, [products, searchInput]);
 
   const currentQueryString = searchParams.toString();
@@ -160,93 +146,95 @@ export default function Home() {
   }, [searchQuery]);
 
   useEffect(() => {
-    const categoriesParam = searchParams.get('categories');
-    const discountParam = searchParams.get('discount');
-    const sortParam = searchParams.get('sort');
-    const queryParam = searchParams.get('q');
-    const minParam = searchParams.get('min');
-    const maxParam = searchParams.get('max');
+    try {
+      const params = new URLSearchParams(currentQueryString);
+      const categoriesParam = params.get('categories');
+      const discountParam = params.get('discount');
+      const sortParam = params.get('sort');
+      const queryParam = params.get('q');
+      const minParam = params.get('min');
+      const maxParam = params.get('max');
 
-    const nextCategories = categoriesParam
-      ? categoriesParam
-          .split(',')
-          .map((item) => item.trim())
-          .filter((item) => item.length > 0 && categories.includes(item))
-      : [];
+      const nextCategories = categoriesParam
+        ? categoriesParam
+            .split(',')
+            .map((item) => item.trim())
+            .filter((item) => item.length > 0 && categories.includes(item))
+        : [];
 
-    const nextDiscount = DISCOUNT_OPTIONS.includes(discountParam as typeof DISCOUNT_OPTIONS[number])
-      ? (discountParam as 'all' | 'with' | 'without')
-      : 'all';
+      const nextDiscount = DISCOUNT_OPTIONS.includes(discountParam as typeof DISCOUNT_OPTIONS[number])
+        ? (discountParam as 'all' | 'with' | 'without')
+        : 'all';
 
-    const nextSort = SORT_OPTIONS.includes(sortParam as typeof SORT_OPTIONS[number])
-      ? (sortParam as 'lowest-price' | 'highest-price' | 'newest')
-      : 'lowest-price';
+      const nextSort = SORT_OPTIONS.includes(sortParam as typeof SORT_OPTIONS[number])
+        ? (sortParam as 'lowest-price' | 'highest-price' | 'newest')
+        : 'lowest-price';
 
-    const nextSearchQuery = queryParam?.trim() ?? '';
+      const nextSearchQuery = queryParam?.trim() ?? '';
 
-    const parsedMin = minParam ? Number(minParam) : defaultPriceRange[0];
-    const parsedMax = maxParam ? Number(maxParam) : defaultPriceRange[1];
-    const safeMin = Number.isFinite(parsedMin)
-      ? Math.max(defaultPriceRange[0], Math.min(parsedMin, defaultPriceRange[1]))
-      : defaultPriceRange[0];
-    const safeMax = Number.isFinite(parsedMax)
-      ? Math.max(defaultPriceRange[0], Math.min(parsedMax, defaultPriceRange[1]))
-      : defaultPriceRange[1];
-    const nextPriceRange: [number, number] = safeMin <= safeMax ? [safeMin, safeMax] : [safeMax, safeMin];
+      const parsedMin = minParam ? Number(minParam) : defaultPriceRange[0];
+      const parsedMax = maxParam ? Number(maxParam) : defaultPriceRange[1];
+      const safeMin = Number.isFinite(parsedMin)
+        ? Math.max(defaultPriceRange[0], Math.min(parsedMin, defaultPriceRange[1]))
+        : defaultPriceRange[0];
+      const safeMax = Number.isFinite(parsedMax)
+        ? Math.max(defaultPriceRange[0], Math.min(parsedMax, defaultPriceRange[1]))
+        : defaultPriceRange[1];
+      const nextPriceRange: [number, number] = safeMin <= safeMax ? [safeMin, safeMax] : [safeMax, safeMin];
 
-    const currentState = useProductStore.getState();
+      const currentState = useProductStore.getState();
 
-    const sameCategories =
-      currentState.selectedCategories.length === nextCategories.length &&
-      currentState.selectedCategories.every((item, index) => item === nextCategories[index]);
-    const sameDiscount = currentState.selectedDiscount === nextDiscount;
-    const sameSort = currentState.sortBy === nextSort;
-    const sameQuery = currentState.searchQuery === nextSearchQuery;
-    const samePrice =
-      currentState.priceRange[0] === nextPriceRange[0] &&
-      currentState.priceRange[1] === nextPriceRange[1];
+      const sameCategories =
+        currentState.selectedCategories.length === nextCategories.length &&
+        currentState.selectedCategories.every((item, index) => item === nextCategories[index]);
+      const sameDiscount = currentState.selectedDiscount === nextDiscount;
+      const sameSort = currentState.sortBy === nextSort;
+      const sameQuery = currentState.searchQuery === nextSearchQuery;
+      const samePrice =
+        currentState.priceRange[0] === nextPriceRange[0] &&
+        currentState.priceRange[1] === nextPriceRange[1];
 
-    lastSyncedQueryString.current = currentQueryString;
+      lastSyncedQueryString.current = currentQueryString;
 
-    if (!sameCategories || !sameDiscount || !sameSort || !sameQuery || !samePrice) {
-      useProductStore.setState({
-        selectedCategories: nextCategories,
-        selectedDiscount: nextDiscount,
-        sortBy: nextSort,
-        searchQuery: nextSearchQuery,
-        priceRange: nextPriceRange,
-      });
-
-      return;
+      if (!sameCategories || !sameDiscount || !sameSort || !sameQuery || !samePrice) {
+        useProductStore.setState({
+          selectedCategories: nextCategories,
+          selectedDiscount: nextDiscount,
+          sortBy: nextSort,
+          searchQuery: nextSearchQuery,
+          priceRange: nextPriceRange,
+        });
+      }
+    } catch (error) {
+      console.error('Error hydrating URL state:', error);
+    } finally {
+      setIsHydrating(false);
     }
-
-    hasHydratedFromUrl.current = true;
   }, [
     categories,
     currentQueryString,
     defaultPriceRange,
-    searchParams,
   ]);
 
   useEffect(() => {
-    if (!hasHydratedFromUrl.current) {
-      return;
-    }
-
-    const nextQueryString = buildQueryString({
-      defaultPriceRange,
-      priceRange,
-      searchQuery,
-      selectedCategories,
-      selectedDiscount,
-      sortBy,
-    });
-
-    if (nextQueryString !== lastSyncedQueryString.current) {
-      lastSyncedQueryString.current = nextQueryString;
-      router.replace(nextQueryString ? `${pathname}?${nextQueryString}` : pathname, {
-        scroll: false,
+    try {
+      const nextQueryString = buildQueryString({
+        defaultPriceRange,
+        priceRange,
+        searchQuery,
+        selectedCategories,
+        selectedDiscount,
+        sortBy,
       });
+
+      if (nextQueryString !== lastSyncedQueryString.current) {
+        lastSyncedQueryString.current = nextQueryString;
+        router.replace(nextQueryString ? `${pathname}?${nextQueryString}` : pathname, {
+          scroll: false,
+        });
+      }
+    } catch (error) {
+      console.error('Error syncing URL state:', error);
     }
   }, [
     defaultPriceRange,
@@ -260,90 +248,88 @@ export default function Home() {
   ]);
 
   const availablePriceRange = useMemo<[number, number]>(() => {
-    const query = searchQuery.trim().toLowerCase();
+    try {
+      const query = searchQuery.trim().toLowerCase();
 
-    const getEffectivePrice = (price: number, salePrice: number) =>
-      salePrice > 0 ? salePrice : price;
+      const productsMatchingOtherFilters = products.filter((product) => {
+        const categoryOk =
+          selectedCategories.length === 0 || selectedCategories.includes(product.category);
 
-    const hasDiscount = (price: number, salePrice: number) =>
-      salePrice > 0 && salePrice < price;
+        const discountOk =
+          selectedDiscount === 'all' ||
+          (selectedDiscount === 'with' && hasDiscount(product.price, product.sale_price)) ||
+          (selectedDiscount === 'without' && !hasDiscount(product.price, product.sale_price));
 
-    const productsMatchingOtherFilters = products.filter((product) => {
-      const categoryOk =
-        selectedCategories.length === 0 || selectedCategories.includes(product.category);
+        const searchOk =
+          query.length === 0 ||
+          product.name.toLowerCase().includes(query) ||
+          product.category.toLowerCase().includes(query) ||
+          product.sub_category.toLowerCase().includes(query) ||
+          product.tags.some((tag) => tag.toLowerCase().includes(query));
 
-      const discountOk =
-        selectedDiscount === 'all' ||
-        (selectedDiscount === 'with' && hasDiscount(product.price, product.sale_price)) ||
-        (selectedDiscount === 'without' && !hasDiscount(product.price, product.sale_price));
+        return categoryOk && discountOk && searchOk;
+      });
 
-      const searchOk =
-        query.length === 0 ||
-        product.name.toLowerCase().includes(query) ||
-        product.category.toLowerCase().includes(query) ||
-        product.sub_category.toLowerCase().includes(query) ||
-        product.tags.some((tag) => tag.toLowerCase().includes(query));
+      if (productsMatchingOtherFilters.length === 0) {
+        return defaultPriceRange;
+      }
 
-      return categoryOk && discountOk && searchOk;
-    });
+      const effectivePrices = productsMatchingOtherFilters.map((product) =>
+        getEffectivePrice(product.price, product.sale_price)
+      );
 
-    if (productsMatchingOtherFilters.length === 0) {
+      return [Math.min(...effectivePrices), Math.max(...effectivePrices)];
+    } catch (error) {
+      console.error('Error calculating available price range:', error);
       return defaultPriceRange;
     }
-
-    const effectivePrices = productsMatchingOtherFilters.map((product) =>
-      getEffectivePrice(product.price, product.sale_price)
-    );
-
-    return [Math.min(...effectivePrices), Math.max(...effectivePrices)];
   }, [defaultPriceRange, products, searchQuery, selectedCategories, selectedDiscount]);
 
   const filteredProducts = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+    try {
+      const query = searchQuery.trim().toLowerCase();
 
-    const getEffectivePrice = (price: number, salePrice: number) =>
-      salePrice > 0 ? salePrice : price;
+      const filtered = products.filter((product) => {
+        const effectivePrice = getEffectivePrice(product.price, product.sale_price);
 
-    const hasDiscount = (price: number, salePrice: number) =>
-      salePrice > 0 && salePrice < price;
+        const categoryOk =
+          selectedCategories.length === 0 || selectedCategories.includes(product.category);
 
-    const filtered = products.filter((product) => {
-      const effectivePrice = getEffectivePrice(product.price, product.sale_price);
+        const discountOk =
+          selectedDiscount === 'all' ||
+          (selectedDiscount === 'with' && hasDiscount(product.price, product.sale_price)) ||
+          (selectedDiscount === 'without' && !hasDiscount(product.price, product.sale_price));
 
-      const categoryOk =
-        selectedCategories.length === 0 || selectedCategories.includes(product.category);
+        const priceOk =
+          effectivePrice >= priceRange[0] && effectivePrice <= priceRange[1];
 
-      const discountOk =
-        selectedDiscount === 'all' ||
-        (selectedDiscount === 'with' && hasDiscount(product.price, product.sale_price)) ||
-        (selectedDiscount === 'without' && !hasDiscount(product.price, product.sale_price));
+        const searchOk =
+          query.length === 0 ||
+          product.name.toLowerCase().includes(query) ||
+          product.category.toLowerCase().includes(query) ||
+          product.sub_category.toLowerCase().includes(query) ||
+          product.tags.some((tag) => tag.toLowerCase().includes(query));
 
-      const priceOk =
-        effectivePrice >= priceRange[0] && effectivePrice <= priceRange[1];
+        return categoryOk && discountOk && priceOk && searchOk;
+      });
 
-      const searchOk =
-        query.length === 0 ||
-        product.name.toLowerCase().includes(query) ||
-        product.category.toLowerCase().includes(query) ||
-        product.sub_category.toLowerCase().includes(query) ||
-        product.tags.some((tag) => tag.toLowerCase().includes(query));
+      if (sortBy === 'highest-price') {
+        return [...filtered].sort(
+          (a, b) => getEffectivePrice(b.price, b.sale_price) - getEffectivePrice(a.price, a.sale_price)
+        );
+      }
 
-      return categoryOk && discountOk && priceOk && searchOk;
-    });
+      if (sortBy === 'newest') {
+        return [...filtered].reverse();
+      }
 
-    if (sortBy === 'highest-price') {
       return [...filtered].sort(
-        (a, b) => getEffectivePrice(b.price, b.sale_price) - getEffectivePrice(a.price, a.sale_price)
+        (a, b) => getEffectivePrice(a.price, a.sale_price) - getEffectivePrice(b.price, b.sale_price)
       );
+    } catch (error) {
+      console.error('Error filtering products:', error);
+      return [];
     }
-
-    if (sortBy === 'newest') {
-      return [...filtered].reverse();
-    }
-
-    return [...filtered].sort(
-      (a, b) => getEffectivePrice(a.price, a.sale_price) - getEffectivePrice(b.price, b.sale_price)
-    );
   }, [products, selectedCategories, selectedDiscount, priceRange, searchQuery, sortBy]);
 
   const hasActiveFilters =
@@ -360,7 +346,7 @@ export default function Home() {
     if (searchQuery.trim()) {
       return `Results for "${searchQuery.trim()}"`;
     }
-    return 'Products';
+    return 'Mens Clothing';
   }, [searchQuery, selectedCategories]);
 
   const sidebarFiltersKey = [
@@ -372,8 +358,9 @@ export default function Home() {
   ].join('::');
 
   return (
+    <ErrorBoundary>
+    <>
     <main className="bg-gray-50 min-h-screen pb-20 lg:pb-0">
-      {/* Navigation Bar */}
       <Header
         cartCount={cartCount}
         searchInput={searchInput}
@@ -406,7 +393,7 @@ export default function Home() {
               defaultPriceRange={defaultPriceRange}
               availablePriceRange={availablePriceRange}
               onCategoryChange={toggleCategory}
-              onDiscountChange={(value) => setDiscount(value as 'all' | 'with' | 'without')}
+              onDiscountChange={(value: DiscountFilterOption) => setDiscount(value)}
               onPriceChange={setPriceRange}
               onClearAll={clearAllFilters}
             />
@@ -547,7 +534,14 @@ export default function Home() {
               </div>
             </div>
 
-            {filteredProducts.length > 0 ? (
+            {isHydrating ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-center">
+                  <LoadingSpinner />
+                </div>
+                <ProductGridSkeleton count={8} />
+              </div>
+            ) : filteredProducts.length > 0 ? (
               <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-5">
                 {filteredProducts.map((product) => (
                   <div key={product.id}>
@@ -558,8 +552,8 @@ export default function Home() {
             ) : (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="text-6xl mb-4">🛍️</div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">No products found</h2>
-                <p className="text-gray-600 mb-6">Try adjusting your filters to find what you&apos;re looking for</p>
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">{MESSAGES.NO_PRODUCTS_FOUND}</h2>
+                <p className="text-gray-600 mb-6">{MESSAGES.ADJUST_FILTERS}</p>
                 <button
                   onClick={clearAllFilters}
                   className="px-6 py-2 bg-lime-500 text-gray-900 font-semibold rounded-lg hover:bg-lime-600 transition-colors"
@@ -588,7 +582,7 @@ export default function Home() {
                 defaultPriceRange={defaultPriceRange}
                 availablePriceRange={availablePriceRange}
                 onCategoryChange={toggleCategory}
-                onDiscountChange={(value) => setDiscount(value as 'all' | 'with' | 'without')}
+                onDiscountChange={(value: DiscountFilterOption) => setDiscount(value)}
                 onPriceChange={setPriceRange}
                 onClearAll={clearAllFilters}
                 onClose={() => setIsMobileFiltersOpen(false)}
@@ -598,5 +592,8 @@ export default function Home() {
         )}
       </div>
     </main>
+    <Footer />
+    </>
+    </ErrorBoundary>
   );
 }

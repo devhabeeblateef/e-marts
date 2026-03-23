@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { BellRing, House, Menu, Search, ShoppingCart, Store, UserCircle, X } from 'lucide-react';
+import { SEARCH_CONFIG, HEADER_CONFIG, MESSAGES } from '@/lib/constants';
 
 type SearchSuggestion = {
   id: string;
@@ -27,7 +28,7 @@ export function Header({
 }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-  const [scrollThreshold] = useState(8);
+  const [scrollThreshold] = useState(HEADER_CONFIG.SCROLL_THRESHOLD);
   const [isDesktopSearchFocused, setIsDesktopSearchFocused] = useState(false);
   const [isMobileSearchFocused, setIsMobileSearchFocused] = useState(false);
   const desktopSearchRef = useRef<HTMLDivElement | null>(null);
@@ -68,8 +69,8 @@ export function Header({
   }, []);
 
   const showMobileSearch = isMobileSearchOpen;
-  const showDesktopSuggestions = isDesktopSearchFocused && searchInput.trim().length >= 2;
-  const showMobileSuggestions = isMobileSearchFocused && searchInput.trim().length >= 2;
+  const showDesktopSuggestions = isDesktopSearchFocused && searchInput.trim().length >= SEARCH_CONFIG.MIN_QUERY_LENGTH;
+  const showMobileSuggestions = isMobileSearchFocused && searchInput.trim().length >= SEARCH_CONFIG.MIN_QUERY_LENGTH;
 
   const suggestionList = (
     <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
@@ -90,8 +91,8 @@ export function Header({
           </button>
         ))
       ) : (
-        <div className="px-4 py-3 text-sm text-gray-500">
-          No close matches yet. Keep typing to refine the suggestions.
+        <div className="px-4 py-3 text-sm text-gray-500" role="status" aria-live="polite">
+          {MESSAGES.NO_CLOSE_MATCHES}
         </div>
       )}
     </div>
@@ -108,7 +109,7 @@ export function Header({
           <div className="flex items-center justify-between gap-2 sm:gap-3">
             <div className="flex items-center gap-1 sm:gap-2">
               <div className="text-xl sm:text-2xl font-bold">
-                <Image src="emart-logo.svg" width={100} height={100} alt="Emarts Logo" />
+                <Image src="/emart-logo.svg" width={120} height={120} alt="Emarts Logo" />
               </div>
             </div>
 
