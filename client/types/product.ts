@@ -13,6 +13,6 @@ export interface Product {
     sub_category: string;
     tags: string[];
     vendor_name: string;
+    vendor_business_name?: string;
     in_stock: boolean;
-    
 }
