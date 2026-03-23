@@ -372,7 +372,7 @@ function HomeContent() {
         }}
       />
 
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
           <Breadcrumb
             selectedCategories={selectedCategories}
@@ -427,7 +427,9 @@ function HomeContent() {
                       }}
                       className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
-                      <span className={`h-4 w-4 rounded border border-gray-900 flex items-center justify-center ${sortBy === 'lowest-price' ? 'bg-gray-900 text-white' : 'bg-white text-white'}`}><Check size={12} /></span>
+                      <span className="inline-flex h-4 w-4 items-center justify-center">
+                        {sortBy === 'lowest-price' && <Check size={14} className="text-gray-900" />}
+                      </span>
                       Lowest Price
                     </button>
                     <button
@@ -437,7 +439,9 @@ function HomeContent() {
                       }}
                       className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
-                      <span className={`h-4 w-4 rounded border border-gray-900 flex items-center justify-center ${sortBy === 'highest-price' ? 'bg-gray-900 text-white' : 'bg-white text-white'}`}><Check size={12} /></span>
+                      <span className="inline-flex h-4 w-4 items-center justify-center">
+                        {sortBy === 'highest-price' && <Check size={14} className="text-gray-900" />}
+                      </span>
                       Highest Price
                     </button>
                     <button
@@ -447,7 +451,9 @@ function HomeContent() {
                       }}
                       className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
-                      <span className={`h-4 w-4 rounded border border-gray-900 flex items-center justify-center ${sortBy === 'newest' ? 'bg-gray-900 text-white' : 'bg-white text-white'}`}><Check size={12} /></span>
+                      <span className="inline-flex h-4 w-4 items-center justify-center">
+                        {sortBy === 'newest' && <Check size={14} className="text-gray-900" />}
+                      </span>
                       Newest
                     </button>
                   </div>
@@ -512,7 +518,9 @@ function HomeContent() {
                       }}
                       className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
-                      <span className={`h-4 w-4 rounded border border-gray-900 flex items-center justify-center ${sortBy === 'lowest-price' ? 'bg-gray-900 text-white' : 'bg-white text-white'}`}><Check size={12} /></span>
+                      <span className="inline-flex h-4 w-4 items-center justify-center">
+                        {sortBy === 'lowest-price' && <Check size={14} className="text-gray-900" />}
+                      </span>
                       Lowest Price
                     </button>
                     <button
@@ -522,7 +530,9 @@ function HomeContent() {
                       }}
                       className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
-                      <span className={`h-4 w-4 rounded border border-gray-900 flex items-center justify-center ${sortBy === 'highest-price' ? 'bg-gray-900 text-white' : 'bg-white text-white'}`}><Check size={12} /></span>
+                      <span className="inline-flex h-4 w-4 items-center justify-center">
+                        {sortBy === 'highest-price' && <Check size={14} className="text-gray-900" />}
+                      </span>
                       Highest Price
                     </button>
                     <button
@@ -532,7 +542,9 @@ function HomeContent() {
                       }}
                       className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
-                      <span className={`h-4 w-4 rounded border border-gray-900 flex items-center justify-center ${sortBy === 'newest' ? 'bg-gray-900 text-white' : 'bg-white text-white'}`}><Check size={12} /></span>
+                      <span className="inline-flex h-4 w-4 items-center justify-center">
+                        {sortBy === 'newest' && <Check size={14} className="text-gray-900" />}
+                      </span>
                       Newest
                     </button>
                   </div>

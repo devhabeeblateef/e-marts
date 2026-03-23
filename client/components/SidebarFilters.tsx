@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { SidebarFiltersProps } from '@/types/sidebar';
 import { VALIDATION_MESSAGES } from '@/lib/constants';
@@ -25,11 +25,39 @@ export function SidebarFilters({
   const [draftMax, setDraftMax] = useState(availableMax.toString());
   const [minError, setMinError] = useState('');
   const [maxError, setMaxError] = useState('');
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [isPriceSaved, setIsPriceSaved] = useState(false);
+  const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const priceSavedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hasCustomPrice =
     priceRange[0] !== defaultPriceRange[0] || priceRange[1] !== defaultPriceRange[1];
   const hasActiveFilters =
     selectedCategories.length > 0 || selectedDiscount !== 'all' || hasCustomPrice;
+
+  const showFeedback = useCallback((message: string) => {
+    setFeedbackMessage(message);
+
+    if (feedbackTimeoutRef.current) {
+      clearTimeout(feedbackTimeoutRef.current);
+    }
+
+    feedbackTimeoutRef.current = setTimeout(() => {
+      setFeedbackMessage('');
+      feedbackTimeoutRef.current = null;
+    }, 1700);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current);
+      }
+      if (priceSavedTimeoutRef.current) {
+        clearTimeout(priceSavedTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const validatePriceInputs = (nextMin: string, nextMax: string) => {
     try {
@@ -77,6 +105,17 @@ export function SidebarFilters({
       }
 
       onPriceChange(parsedMin, parsedMax);
+      setIsPriceSaved(true);
+      showFeedback('Price range saved');
+
+      if (priceSavedTimeoutRef.current) {
+        clearTimeout(priceSavedTimeoutRef.current);
+      }
+
+      priceSavedTimeoutRef.current = setTimeout(() => {
+        setIsPriceSaved(false);
+        priceSavedTimeoutRef.current = null;
+      }, 1600);
     } catch (error) {
       console.error('Error saving price filter:', error);
     }
@@ -118,6 +157,16 @@ export function SidebarFilters({
           )}
         </div>
       </div>
+
+      {feedbackMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="mb-5 rounded-lg border border-lime-200 bg-lime-50 px-3 py-2 text-sm font-medium text-lime-800"
+        >
+          {feedbackMessage}
+        </div>
+      )}
 
       {hasActiveFilters && (
         <div className="mb-8 flex flex-wrap gap-3">
@@ -178,7 +227,10 @@ export function SidebarFilters({
               name="discount"
               value="all"
               checked={selectedDiscount === 'all'}
-              onChange={() => onDiscountChange('all')}
+              onChange={() => {
+                onDiscountChange('all');
+                showFeedback('Discount filter cleared');
+              }}
               className="h-5 w-5 cursor-pointer accent-lime-500"
             />
             <span className="text-sm font-light text-gray-700">Show All</span>
@@ -190,7 +242,10 @@ export function SidebarFilters({
               name="discount"
               value="with"
               checked={selectedDiscount === 'with'}
-              onChange={() => onDiscountChange('with')}
+              onChange={() => {
+                onDiscountChange('with');
+                showFeedback('With discount filter added');
+              }}
               className="h-5 w-5 cursor-pointer accent-lime-500"
             />
             <span className="text-sm font-light text-gray-700">With Discount</span>
@@ -202,7 +257,10 @@ export function SidebarFilters({
               name="discount"
               value="without"
               checked={selectedDiscount === 'without'}
-              onChange={() => onDiscountChange('without')}
+              onChange={() => {
+                onDiscountChange('without');
+                showFeedback('Without discount filter added');
+              }}
               className="h-5 w-5 cursor-pointer accent-lime-500"
             />
             <span className="text-sm font-light text-gray-700">Without Discount</span>
@@ -264,9 +322,11 @@ export function SidebarFilters({
             </button>
             <button
               onClick={handleSavePrice}
-              className="text-sm font-semibold text-lime-500 hover:text-lime-600"
+              className={`text-sm font-semibold transition-colors ${
+                isPriceSaved ? 'text-lime-700' : 'text-lime-500 hover:text-lime-600'
+              }`}
             >
-              Save
+              {isPriceSaved ? 'Saved' : 'Save'}
             </button>
           </div>
         </div>
@@ -283,7 +343,10 @@ export function SidebarFilters({
               <input
                 type="checkbox"
                 checked={selectedCategories.includes(category)}
-                onChange={(e) => onCategoryChange(category, e.target.checked)}
+                onChange={(e) => {
+                  onCategoryChange(category, e.target.checked);
+                  showFeedback(e.target.checked ? `${category} filter added` : `${category} filter removed`);
+                }}
                 className="h-4 w-4 cursor-pointer accent-lime-500"
               />
               <span className="text-sm font-medium text-gray-700">{category}</span>
@@ -291,6 +354,12 @@ export function SidebarFilters({
           ))}
         </div>
       </div>
+
+      {feedbackMessage && isMobileFullscreen && (
+        <div className="pointer-events-none fixed bottom-24 left-1/2 z-60 -translate-x-1/2 rounded-full bg-gray-900 px-4 py-2 text-xs font-semibold text-white shadow-lg">
+          {feedbackMessage}
+        </div>
+      )}
     </aside>
   );
 }
