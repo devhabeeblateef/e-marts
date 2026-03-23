@@ -3,20 +3,6 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 
-interface SidebarFiltersProps {
-  categories: string[];
-  selectedCategories: string[];
-  selectedDiscount: string;
-  priceRange: [number, number];
-  defaultPriceRange: [number, number];
-  availablePriceRange: [number, number];
-  onCategoryChange: (category: string, checked: boolean) => void;
-  onDiscountChange: (discount: string) => void;
-  onPriceChange: (min: number, max: number) => void;
-  onClearAll: () => void;
-  onClose?: () => void;
-}
-
 export function SidebarFilters({
   categories,
   selectedCategories,
@@ -167,7 +153,7 @@ export function SidebarFilters({
       )}
 
       <div className="mb-8">
-        <h3 className="mb-4 font-semibold text-gray-900">Discount</h3>
+        <h3 className="mb-4 font-semibold text-sm text-gray-900">Discount</h3>
         <div className="overflow-hidden rounded-lg border border-gray-200">
           <label className="flex cursor-pointer items-center gap-3 px-4 py-5 transition-colors hover:bg-gray-50">
             <input
@@ -180,7 +166,7 @@ export function SidebarFilters({
             />
             <span className="text-sm font-light text-gray-700">Show All</span>
           </label>
-          <div className="mx-4 font-light border-t border-gray-200" />
+          <div className="mx- font-light border-t border-gray-200" />
           <label className="flex cursor-pointer items-center gap-3 px-4 py-5 transition-colors hover:bg-gray-50">
             <input
               type="radio"

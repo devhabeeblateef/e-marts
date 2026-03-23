@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { SidebarFilters } from '@/components/SidebarFilters';
 import ProductCard from '@/components/ProductCard';
@@ -10,8 +11,65 @@ import { ChevronDown, SlidersHorizontal } from 'lucide-react';
 // Zustand Store
 import { useProductStore } from '@/store/useProductStore';
 
+const SORT_OPTIONS = ['lowest-price', 'highest-price', 'newest'] as const;
+const DISCOUNT_OPTIONS = ['all', 'with', 'without'] as const;
+
+type SearchSuggestion = {
+  id: string;
+  label: string;
+  meta: string;
+};
+
+function buildQueryString({
+  defaultPriceRange,
+  priceRange,
+  searchQuery,
+  selectedCategories,
+  selectedDiscount,
+  sortBy,
+}: {
+  defaultPriceRange: [number, number];
+  priceRange: [number, number];
+  searchQuery: string;
+  selectedCategories: string[];
+  selectedDiscount: 'all' | 'with' | 'without';
+  sortBy: 'lowest-price' | 'highest-price' | 'newest';
+}) {
+  const params = new URLSearchParams();
+
+  if (searchQuery.trim()) {
+    params.set('q', searchQuery.trim());
+  }
+
+  if (selectedCategories.length > 0) {
+    params.set('categories', selectedCategories.join(','));
+  }
+
+  if (selectedDiscount !== 'all') {
+    params.set('discount', selectedDiscount);
+  }
+
+  if (sortBy !== 'lowest-price') {
+    params.set('sort', sortBy);
+  }
+
+  if (priceRange[0] !== defaultPriceRange[0] || priceRange[1] !== defaultPriceRange[1]) {
+    params.set('min', String(priceRange[0]));
+    params.set('max', String(priceRange[1]));
+  }
+
+  return params.toString();
+}
+
 
 export default function Home() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const hasHydratedFromUrl = useRef(false);
+  const lastSyncedQueryString = useRef('');
+  const [searchInput, setSearchInput] = useState('');
+
   const products = useProductStore((state) => state.products);
   const selectedCategories = useProductStore((state) => state.selectedCategories);
   const selectedDiscount = useProductStore((state) => state.selectedDiscount);
@@ -38,6 +96,168 @@ export default function Home() {
   const categories = useMemo(() => {
     return Array.from(new Set(products.map((product) => product.category))).sort();
   }, [products]);
+
+  const searchSuggestions = useMemo<SearchSuggestion[]>(() => {
+    const query = searchInput.trim().toLowerCase();
+
+    if (query.length < 2) {
+      return [];
+    }
+
+    return products
+      .map((product) => {
+        const productName = product.name.toLowerCase();
+        const category = product.category.toLowerCase();
+        const subCategory = product.sub_category.toLowerCase();
+        const vendor = product.vendor_name.toLowerCase();
+        const matchingTag = product.tags.find((tag) => tag.toLowerCase().includes(query));
+
+        let score = 0;
+
+        if (productName === query) {
+          score += 100;
+        } else if (productName.startsWith(query)) {
+          score += 60;
+        } else if (productName.includes(query)) {
+          score += 40;
+        }
+
+        if (category.startsWith(query) || subCategory.startsWith(query)) {
+          score += 25;
+        } else if (category.includes(query) || subCategory.includes(query)) {
+          score += 15;
+        }
+
+        if (vendor.includes(query)) {
+          score += 10;
+        }
+
+        if (matchingTag) {
+          score += 12;
+        }
+
+        if (score === 0) {
+          return null;
+        }
+
+        return {
+          id: product.id,
+          label: product.name,
+          meta: `${product.category} · ${product.sub_category}`,
+          score,
+        };
+      })
+      .filter((suggestion): suggestion is SearchSuggestion & { score: number } => suggestion !== null)
+      .sort((left, right) => right.score - left.score || left.label.localeCompare(right.label))
+      .slice(0, 6)
+      .map(({ id, label, meta }) => ({ id, label, meta }));
+  }, [products, searchInput]);
+
+  const currentQueryString = searchParams.toString();
+
+  useEffect(() => {
+    setSearchInput(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const categoriesParam = searchParams.get('categories');
+    const discountParam = searchParams.get('discount');
+    const sortParam = searchParams.get('sort');
+    const queryParam = searchParams.get('q');
+    const minParam = searchParams.get('min');
+    const maxParam = searchParams.get('max');
+
+    const nextCategories = categoriesParam
+      ? categoriesParam
+          .split(',')
+          .map((item) => item.trim())
+          .filter((item) => item.length > 0 && categories.includes(item))
+      : [];
+
+    const nextDiscount = DISCOUNT_OPTIONS.includes(discountParam as typeof DISCOUNT_OPTIONS[number])
+      ? (discountParam as 'all' | 'with' | 'without')
+      : 'all';
+
+    const nextSort = SORT_OPTIONS.includes(sortParam as typeof SORT_OPTIONS[number])
+      ? (sortParam as 'lowest-price' | 'highest-price' | 'newest')
+      : 'lowest-price';
+
+    const nextSearchQuery = queryParam?.trim() ?? '';
+
+    const parsedMin = minParam ? Number(minParam) : defaultPriceRange[0];
+    const parsedMax = maxParam ? Number(maxParam) : defaultPriceRange[1];
+    const safeMin = Number.isFinite(parsedMin)
+      ? Math.max(defaultPriceRange[0], Math.min(parsedMin, defaultPriceRange[1]))
+      : defaultPriceRange[0];
+    const safeMax = Number.isFinite(parsedMax)
+      ? Math.max(defaultPriceRange[0], Math.min(parsedMax, defaultPriceRange[1]))
+      : defaultPriceRange[1];
+    const nextPriceRange: [number, number] = safeMin <= safeMax ? [safeMin, safeMax] : [safeMax, safeMin];
+
+    const currentState = useProductStore.getState();
+
+    const sameCategories =
+      currentState.selectedCategories.length === nextCategories.length &&
+      currentState.selectedCategories.every((item, index) => item === nextCategories[index]);
+    const sameDiscount = currentState.selectedDiscount === nextDiscount;
+    const sameSort = currentState.sortBy === nextSort;
+    const sameQuery = currentState.searchQuery === nextSearchQuery;
+    const samePrice =
+      currentState.priceRange[0] === nextPriceRange[0] &&
+      currentState.priceRange[1] === nextPriceRange[1];
+
+    lastSyncedQueryString.current = currentQueryString;
+
+    if (!sameCategories || !sameDiscount || !sameSort || !sameQuery || !samePrice) {
+      useProductStore.setState({
+        selectedCategories: nextCategories,
+        selectedDiscount: nextDiscount,
+        sortBy: nextSort,
+        searchQuery: nextSearchQuery,
+        priceRange: nextPriceRange,
+      });
+
+      return;
+    }
+
+    hasHydratedFromUrl.current = true;
+  }, [
+    categories,
+    currentQueryString,
+    defaultPriceRange,
+    searchParams,
+  ]);
+
+  useEffect(() => {
+    if (!hasHydratedFromUrl.current) {
+      return;
+    }
+
+    const nextQueryString = buildQueryString({
+      defaultPriceRange,
+      priceRange,
+      searchQuery,
+      selectedCategories,
+      selectedDiscount,
+      sortBy,
+    });
+
+    if (nextQueryString !== lastSyncedQueryString.current) {
+      lastSyncedQueryString.current = nextQueryString;
+      router.replace(nextQueryString ? `${pathname}?${nextQueryString}` : pathname, {
+        scroll: false,
+      });
+    }
+  }, [
+    defaultPriceRange,
+    pathname,
+    priceRange,
+    router,
+    searchQuery,
+    selectedCategories,
+    selectedDiscount,
+    sortBy,
+  ]);
 
   const availablePriceRange = useMemo<[number, number]>(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -152,20 +372,28 @@ export default function Home() {
   ].join('::');
 
   return (
-    <main className="bg-gray-50 min-h-screen">
+    <main className="bg-gray-50 min-h-screen pb-20 lg:pb-0">
       {/* Navigation Bar */}
       <Header
         cartCount={cartCount}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
+        searchInput={searchInput}
+        searchSuggestions={searchSuggestions}
+        onSearchInputChange={setSearchInput}
+        onSearchSelect={(value) => {
+          setSearchInput(value);
+          setSearchQuery(value);
+        }}
       />
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
-        
-        <Breadcrumb
-          selectedCategories={selectedCategories}
-        />
+      <div className="border-b border-gray-200 bg-white/90 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
+          <Breadcrumb
+            selectedCategories={selectedCategories}
+          />
+        </div>
+      </div>
 
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         <div className="flex flex-col lg:flex-row gap-4 sm:gap-8">
           <div className="hidden lg:block">
             
@@ -186,7 +414,77 @@ export default function Home() {
           </div>
 
           <div className="flex-1">
-            <div className="mb-6 flex items-start justify-between gap-3 sm:mb-4 sm:items-center">
+            <div className="mb-4 flex items-center gap-2 lg:hidden">
+              <button
+                onClick={() => setIsMobileFiltersOpen(true)}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-xs sm:text-sm font-medium text-gray-700"
+              >
+                <SlidersHorizontal size={16} />
+                Filters
+              </button>
+
+              <div className="relative flex-1">
+                <button
+                  onClick={() => setIsSortOpen(!isSortOpen)}
+                  className="w-full flex items-center justify-between px-3 py-2 bg-white border border-gray-300 rounded-lg text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <span>{sortBy === 'lowest-price' ? 'Lowest' : sortBy === 'highest-price' ? 'Highest' : 'Newest'}</span>
+                  <ChevronDown size={18} className={`transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isSortOpen && (
+                  <div className="absolute right-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                    <button
+                      onClick={() => {
+                        setSortBy('lowest-price');
+                        setIsSortOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Lowest Price
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSortBy('highest-price');
+                        setIsSortOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Highest Price
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSortBy('newest');
+                        setIsSortOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Newest
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mb-4 lg:hidden">
+              <div className="flex flex-wrap items-baseline gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                  {heading}
+                </h1>
+                <p className="text-xs text-gray-600 sm:text-sm">
+                  ({filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} found)
+                </p>
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearAllFilters}
+                    className="text-xs sm:text-sm font-medium text-lime-600 hover:text-lime-700"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="mb-4 hidden lg:flex items-start justify-between gap-3 sm:items-center">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-baseline gap-2">
                   <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
@@ -195,6 +493,14 @@ export default function Home() {
                   <p className="text-xs text-gray-600 sm:text-sm">
                     ({filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} found)
                   </p>
+                  {hasActiveFilters && (
+                    <button
+                      onClick={clearAllFilters}
+                      className="text-xs sm:text-sm font-medium text-lime-600 hover:text-lime-700"
+                    >
+                      Reset
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -239,29 +545,6 @@ export default function Home() {
                   </div>
                 )}
               </div>
-              </div>
-              
-
-              <div className="flex flex-col sm:flex-row w-full gap-3 sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setIsMobileFiltersOpen(true)}
-                    className="lg:hidden flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-xs sm:text-sm font-medium text-gray-700"
-                  >
-                    <SlidersHorizontal size={16} />
-                    Filters
-                  </button>
-                  {hasActiveFilters && (
-                    <button
-                      onClick={clearAllFilters}
-                      className="text-xs sm:text-sm font-medium text-lime-600 hover:text-lime-700"
-                    >
-                      Reset
-                    </button>
-                  )}
-                </div>
-
-                
             </div>
 
             {filteredProducts.length > 0 ? (
