@@ -1,4 +1,4 @@
-import { Facebook, Instagram, Music, Mail } from 'lucide-react';
+import {FaFacebook, FaInstagram, FaTiktok, FaThreads} from 'react-icons/fa';
 import Image from 'next/image';
 
 export function Footer() {
@@ -25,7 +25,7 @@ export function Footer() {
                 className="text-gray-600 hover:text-lime-600 transition-colors"
                 aria-label="Facebook"
               >
-                <Facebook size={24} />
+                <FaFacebook size={24} />
               </a>
               <a
                 href="https://www.instagram.com/emarts.ng?igsh=MTM4a3YyeXVzZHNwbA=="
@@ -34,7 +34,7 @@ export function Footer() {
                 className="text-gray-600 hover:text-lime-600 transition-colors"
                 aria-label="Instagram"
               >
-                <Instagram size={24} />
+                <FaInstagram size={24} />
               </a>
               <a
                 href="https://www.tiktok.com/@emarts.ng?_r=1&_t=ZS-92gDCn5GKVE"
@@ -43,7 +43,7 @@ export function Footer() {
                 className="text-gray-600 hover:text-lime-600 transition-colors"
                 aria-label="TikTok"
               >
-                <Music size={24} />
+                <FaTiktok size={24} />
               </a>
               <a
                 href="https://www.threads.com/@emarts.ng"
@@ -52,7 +52,7 @@ export function Footer() {
                 className="text-gray-600 hover:text-lime-600 transition-colors"
                 aria-label="Threads"
               >
-                <Mail size={24} />
+                <FaThreads size={24} />
               </a>
             </div>
           </div>
