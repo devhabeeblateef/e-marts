@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { SidebarFilters } from '@/components/SidebarFilters';
@@ -65,7 +65,7 @@ function buildQueryString({
 }
 
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -595,5 +595,26 @@ export default function Home() {
     <Footer />
     </>
     </ErrorBoundary>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div className="bg-gray-50 min-h-screen pb-20 lg:pb-0">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-8">
+            <div className="space-y-4">
+              <div className="flex items-center justify-center">
+                <LoadingSpinner />
+              </div>
+              <ProductGridSkeleton count={8} />
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <HomeContent />
+    </Suspense>
   );
 }
