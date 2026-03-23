@@ -10,14 +10,11 @@ export function Breadcrumb({selectedCategories}: BreadcrumbProps) {
       aria-label="Breadcrumb"
     >
         <button className="hover:text-gray-900 cursor-pointer focus:outline-none focus:underline">Home</button>
-        <ChevronRight size={16} />
         <span aria-hidden="true"><ChevronRight size={16} /></span>
         <button className="hover:text-gray-900 cursor-pointer focus:outline-none focus:underline">Market</button>
-        <ChevronRight size={16} />
         <span aria-hidden="true"><ChevronRight size={16} /></span>
         <button className="hover:text-gray-900 cursor-pointer focus:outline-none focus:underline">Search</button>
-          <span aria-hidden="true"><ChevronRight size={16} /></span>
-        <ChevronRight size={16} />
+        <span aria-hidden="true"><ChevronRight size={16} /></span>
         <span className="text-gray-400">
           {selectedCategories.length > 0 ? selectedCategories.join(', ') : 'Mens-clothing'}
         </span>

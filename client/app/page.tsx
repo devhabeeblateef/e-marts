@@ -8,7 +8,7 @@ import { Footer } from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
 import { Breadcrumb } from '@/components/BreadCrumb';
 import { ProductGridSkeleton } from '@/components/SkeletonLoader';
-import { ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { SORT_OPTIONS, DISCOUNT_OPTIONS, SEARCH_CONFIG, MESSAGES } from '@/lib/constants';
@@ -372,7 +372,7 @@ function HomeContent() {
         }}
       />
 
-      <div className="border-b border-gray-200 bg-white/90 backdrop-blur-sm">
+      <div className="border-b border-gray-200 bg-white">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
           <Breadcrumb
             selectedCategories={selectedCategories}
@@ -401,19 +401,19 @@ function HomeContent() {
           </div>
 
           <div className="flex-1">
-            <div className="mb-4 flex items-center gap-2 lg:hidden">
+            <div className="mb-4 flex items-center justify-between lg:hidden">
               <button
                 onClick={() => setIsMobileFiltersOpen(true)}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-xs sm:text-sm font-medium text-gray-700"
+                className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 bg-white border border-gray-300 rounded-lg text-xs sm:text-sm font-medium text-gray-700 w-24"
               >
                 <SlidersHorizontal size={16} />
                 Filters
               </button>
 
-              <div className="relative flex-1">
+              <div className="relative w-24">
                 <button
                   onClick={() => setIsSortOpen(!isSortOpen)}
-                  className="w-full flex items-center justify-between px-3 py-2 bg-white border border-gray-300 rounded-lg text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="w-full flex items-center justify-between px-2.5 py-2 bg-white border border-gray-300 rounded-lg text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   <span>{sortBy === 'lowest-price' ? 'Lowest' : sortBy === 'highest-price' ? 'Highest' : 'Newest'}</span>
                   <ChevronDown size={18} className={`transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
@@ -425,8 +425,9 @@ function HomeContent() {
                         setSortBy('lowest-price');
                         setIsSortOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100"
+                      className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
+                      <span className={`h-4 w-4 rounded border border-gray-900 flex items-center justify-center ${sortBy === 'lowest-price' ? 'bg-gray-900 text-white' : 'bg-white text-white'}`}><Check size={12} /></span>
                       Lowest Price
                     </button>
                     <button
@@ -434,8 +435,9 @@ function HomeContent() {
                         setSortBy('highest-price');
                         setIsSortOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100"
+                      className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
+                      <span className={`h-4 w-4 rounded border border-gray-900 flex items-center justify-center ${sortBy === 'highest-price' ? 'bg-gray-900 text-white' : 'bg-white text-white'}`}><Check size={12} /></span>
                       Highest Price
                     </button>
                     <button
@@ -443,8 +445,9 @@ function HomeContent() {
                         setSortBy('newest');
                         setIsSortOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100"
+                      className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
+                      <span className={`h-4 w-4 rounded border border-gray-900 flex items-center justify-center ${sortBy === 'newest' ? 'bg-gray-900 text-white' : 'bg-white text-white'}`}><Check size={12} /></span>
                       Newest
                     </button>
                   </div>
@@ -458,7 +461,7 @@ function HomeContent() {
                   {heading}
                 </h1>
                 <p className="text-xs text-gray-600 sm:text-sm">
-                  ({filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} found)
+                  ({filteredProducts.length} product(s) found)
                 </p>
                 {hasActiveFilters && (
                   <button
@@ -478,7 +481,7 @@ function HomeContent() {
                     {heading}
                   </h1>
                   <p className="text-xs text-gray-600 sm:text-sm">
-                    ({filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} found)
+                    ({filteredProducts.length} product(s) found)
                   </p>
                   {hasActiveFilters && (
                     <button
@@ -507,8 +510,9 @@ function HomeContent() {
                         setSortBy('lowest-price');
                         setIsSortOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100"
+                      className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
+                      <span className={`h-4 w-4 rounded border border-gray-900 flex items-center justify-center ${sortBy === 'lowest-price' ? 'bg-gray-900 text-white' : 'bg-white text-white'}`}><Check size={12} /></span>
                       Lowest Price
                     </button>
                     <button
@@ -516,8 +520,9 @@ function HomeContent() {
                         setSortBy('highest-price');
                         setIsSortOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100"
+                      className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
+                      <span className={`h-4 w-4 rounded border border-gray-900 flex items-center justify-center ${sortBy === 'highest-price' ? 'bg-gray-900 text-white' : 'bg-white text-white'}`}><Check size={12} /></span>
                       Highest Price
                     </button>
                     <button
@@ -525,8 +530,9 @@ function HomeContent() {
                         setSortBy('newest');
                         setIsSortOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100"
+                      className="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
+                      <span className={`h-4 w-4 rounded border border-gray-900 flex items-center justify-center ${sortBy === 'newest' ? 'bg-gray-900 text-white' : 'bg-white text-white'}`}><Check size={12} /></span>
                       Newest
                     </button>
                   </div>
@@ -572,21 +578,44 @@ function HomeContent() {
               aria-label="Close filters"
               onClick={() => setIsMobileFiltersOpen(false)}
             />
-            <div className="absolute right-0 top-0 h-full w-full max-w-sm bg-white p-4 overflow-y-auto">
-              <SidebarFilters
-                key={sidebarFiltersKey}
-                categories={categories}
-                selectedCategories={selectedCategories}
-                selectedDiscount={selectedDiscount}
-                priceRange={priceRange}
-                defaultPriceRange={defaultPriceRange}
-                availablePriceRange={availablePriceRange}
-                onCategoryChange={toggleCategory}
-                onDiscountChange={(value: DiscountFilterOption) => setDiscount(value)}
-                onPriceChange={setPriceRange}
-                onClearAll={clearAllFilters}
-                onClose={() => setIsMobileFiltersOpen(false)}
-              />
+            <div className="absolute inset-0 bg-white flex flex-col">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 sticky top-0 bg-white z-10">
+                <button
+                  onClick={() => setIsMobileFiltersOpen(false)}
+                  className="inline-flex items-center gap-1 text-sm font-medium text-gray-900"
+                >
+                  <ArrowLeft size={18} />
+                  Back
+                </button>
+                <h2 className="text-base font-semibold text-gray-900">Filters</h2>
+                <div className="w-10" />
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4">
+                <SidebarFilters
+                  key={sidebarFiltersKey}
+                  categories={categories}
+                  selectedCategories={selectedCategories}
+                  selectedDiscount={selectedDiscount}
+                  priceRange={priceRange}
+                  defaultPriceRange={defaultPriceRange}
+                  availablePriceRange={availablePriceRange}
+                  onCategoryChange={toggleCategory}
+                  onDiscountChange={(value: DiscountFilterOption) => setDiscount(value)}
+                  onPriceChange={setPriceRange}
+                  onClearAll={clearAllFilters}
+                  isMobileFullscreen
+                />
+              </div>
+
+              <div className="p-4 border-t border-gray-200 bg-white sticky bottom-0">
+                <button
+                  onClick={() => setIsMobileFiltersOpen(false)}
+                  className="w-full rounded-lg bg-gray-200 px-4 py-3 text-black font-semibold"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         )}

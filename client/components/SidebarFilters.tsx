@@ -17,6 +17,7 @@ export function SidebarFilters({
   onPriceChange,
   onClearAll,
   onClose,
+  isMobileFullscreen,
 }: SidebarFiltersProps) {
   const [availableMin, availableMax] = availablePriceRange;
 
@@ -94,9 +95,9 @@ export function SidebarFilters({
   };
 
   return (
-    <aside className="w-full lg:w-80 bg-white border border-gray-200 rounded-lg p-4 sm:p-6 h-fit lg:sticky lg:top-24">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Filters</h2>
+    <aside className={isMobileFullscreen ? 'w-full bg-white p-0 h-full' : 'w-full lg:w-80 bg-white border border-gray-200 rounded-lg p-4 sm:p-6 h-fit lg:sticky lg:top-24'}>
+      <div className={`flex items-center justify-between mb-6 ${isMobileFullscreen ? 'px-0' : ''}`}>
+        {!isMobileFullscreen && <h2 className="text-xl font-bold text-gray-900">Filters</h2>}
         <div className="flex items-center gap-3">
           {hasActiveFilters && (
             <button

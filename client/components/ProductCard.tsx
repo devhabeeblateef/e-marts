@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { Product } from '@/types/product';
-import { ShoppingCart } from 'lucide-react';
+import { Check, ShoppingCart } from 'lucide-react';
 import { getEffectivePrice, hasDiscount, getDiscountPercentage } from '@/lib/product-utils';
 import { STOCK_CONFIG, MESSAGES } from '@/lib/constants';
 import { formatPrice } from '@/lib/utils';
@@ -16,11 +16,22 @@ const FALLBACK_IMAGE =
 
 export default function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const [imageSrc, setImageSrc] = useState(product.image);
+  const [justAdded, setJustAdded] = useState(false);
   const hasDiscountApplied = hasDiscount(product.price, product.sale_price);
   const discountPercentage = getDiscountPercentage(product.price, product.sale_price);
   const effectivePrice = getEffectivePrice(product.price, product.sale_price);
   const hasStock = product.quantity > 0;
   const isLowStock = hasStock && product.quantity <= STOCK_CONFIG.LOW_STOCK_THRESHOLD;
+
+  const handleAddToCart = () => {
+    if (!hasStock) {
+      return;
+    }
+
+    onAddToCart();
+    setJustAdded(true);
+    window.setTimeout(() => setJustAdded(false), 1300);
+  };
 
   return (
     <div className="group overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg">
@@ -68,22 +79,22 @@ export default function ProductCard({ product, onAddToCart }: ProductCardProps) 
           </div>
 
           <button
-            onClick={onAddToCart}
+            onClick={handleAddToCart}
             disabled={!hasStock}
             aria-label="Add to Cart"
-            className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-900 transition-colors hover:border-lime-500 hover:text-lime-600 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400 lg:flex xl:h-10 xl:w-10"
+            className={`hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-all duration-200 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400 lg:flex xl:h-10 xl:w-10 ${justAdded ? 'border-lime-500 bg-lime-100 text-lime-700' : 'border-gray-300 bg-white text-gray-900 hover:border-lime-500 hover:text-lime-600'}`}
           >
-            <ShoppingCart size={15} />
+            {justAdded ? <Check size={15} /> : <ShoppingCart size={15} />}
           </button>
         </div>
 
         <button
-          onClick={onAddToCart}
+          onClick={handleAddToCart}
           disabled={!hasStock}
-          className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-900 transition-colors hover:border-lime-500 hover:text-lime-600 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400 lg:hidden"
+          className={`mt-2.5 flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400 lg:hidden ${justAdded ? 'border-lime-500 bg-lime-100 text-lime-700' : 'border-gray-300 bg-white text-gray-900 hover:border-lime-500 hover:text-lime-600'}`}
         >
-          <ShoppingCart size={16} />
-          Add to Cart
+          {justAdded ? <Check size={16} /> : <ShoppingCart size={16} />}
+          {justAdded ? 'Added' : 'Add to Cart'}
         </button>
       </div>
     </div>

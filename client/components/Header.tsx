@@ -26,6 +26,7 @@ export function Header({
   onSearchInputChange,
   onSearchSelect,
 }: HeaderProps) {
+  const [activeNav, setActiveNav] = useState<'home' | 'market' | 'search' | 'cart' | 'menu'>('home');
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [scrollThreshold] = useState(HEADER_CONFIG.SCROLL_THRESHOLD);
@@ -84,6 +85,7 @@ export function Header({
               onSearchSelect(suggestion.label);
               setIsDesktopSearchFocused(false);
               setIsMobileSearchFocused(false);
+              setIsMobileSearchOpen(false);
             }}
           >
             <span className="text-sm font-medium text-gray-900">{suggestion.label}</span>
@@ -106,10 +108,10 @@ export function Header({
       }`}
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-4">
-          <div className="flex items-center justify-between gap-2 sm:gap-3">
+          <div className="flex items-center justify-between gap-1.5 sm:gap-3">
             <div className="flex items-center gap-1 sm:gap-2">
               <div className="text-xl sm:text-2xl font-bold">
-                <Image src="/emart-logo.svg" width={120} height={120} alt="Emarts Logo" />
+                <Image src="/emart-logo.svg" width={120} height={120} alt="Emarts Logo" className="h-auto w-[96px] sm:w-[120px]" />
               </div>
             </div>
 
@@ -137,10 +139,10 @@ export function Header({
               </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
               <button className="relative shrink-0">
-                <div className="bg-lime-300 p-3 rounded-full inline-flex items-center justify-center hover:cursor-pointer transition-colors">
-                  <ShoppingCart size={22} className="text-gray-600" />
+                <div className="bg-lime-300 p-2.5 sm:p-3 rounded-full inline-flex items-center justify-center hover:cursor-pointer transition-colors">
+                  <ShoppingCart size={20} className="text-gray-600 sm:size-5.5" />
                 </div>
 
                 {cartCount > 0 && (
@@ -151,21 +153,32 @@ export function Header({
               </button>
 
               <button className="relative hidden sm:block">
-                <div className="bg-lime-300  p-3 rounded-full inline-flex items-center justify-center hover:cursor-pointer transition-colors">
+                <div className="bg-lime-300 p-3 rounded-full inline-flex items-center justify-center hover:cursor-pointer transition-colors">
                   <BellRing size={22} className="text-gray-600" />
                 </div>
               </button>
 
               <button className="flex items-center gap-2 text-gray-900 transition-colors">
                 <UserCircle size={28} />
-                <span className="hidden hover:cursor-pointer sm:inline text-sm font-medium">Sign In / Up</span>
+                <span className="hover:cursor-pointer inline text-[10px] leading-none sm:text-sm font-medium">Sign In / Up</span>
               </button>
             </div>
           </div>
           {showMobileSearch && (
             <div className="mt-2 lg:hidden">
               <div ref={mobileSearchRef} className="relative">
-                <div className="flex items-center gap-2 rounded-full border-2 border-lime-500 bg-white px-2 py-1.5">
+                <div className="flex items-center gap-1.5 rounded-full border-2 border-lime-500 bg-white px-2 py-1.5">
+                  <input
+                    type="text"
+                    placeholder="Search products..."
+                    value={searchInput}
+                    onChange={(event) => onSearchInputChange(event.target.value)}
+                    onFocus={() => setIsMobileSearchFocused(true)}
+                    className="w-full bg-transparent px-1 py-1 text-sm text-black placeholder-gray-500 focus:outline-none"
+                  />
+                  <button className="p-1 text-gray-500" aria-label="Search" onClick={() => setIsMobileSearchFocused(true)}>
+                    <Search size={18} />
+                  </button>
                   <button
                     aria-label="Close mobile search"
                     className="rounded-full p-1 text-gray-600 hover:bg-gray-100"
@@ -175,17 +188,6 @@ export function Header({
                     }}
                   >
                     <X size={18} />
-                  </button>
-                  <input
-                    type="text"
-                    placeholder="Search products..."
-                    value={searchInput}
-                    onChange={(event) => onSearchInputChange(event.target.value)}
-                    onFocus={() => setIsMobileSearchFocused(true)}
-                    className="w-full bg-transparent px-1 py-1 text-sm text-black placeholder-gray-500 focus:outline-none"
-                  />
-                  <button className="p-1 text-gray-500" aria-label="Search">
-                    <Search size={18} />
                   </button>
                 </div>
                 {showMobileSuggestions && suggestionList}
@@ -197,24 +199,39 @@ export function Header({
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white/95 backdrop-blur-md lg:hidden">
         <div className="mx-auto grid h-16 max-w-2xl grid-cols-5">
-          <button className="flex flex-col items-center justify-center text-[11px] font-medium text-gray-500">
+          <button
+            className={`flex flex-col items-center justify-center text-[11px] font-medium ${activeNav === 'home' ? 'text-gray-900' : 'text-gray-500'}`}
+            onClick={() => setActiveNav('home')}
+          >
             <House size={20} />
             Home
           </button>
-          <button className="flex flex-col items-center justify-center text-[11px] font-medium text-gray-500">
+          <button
+            className={`flex flex-col items-center justify-center text-[11px] font-medium ${activeNav === 'market' ? 'text-gray-900' : 'text-gray-500'}`}
+            onClick={() => setActiveNav('market')}
+          >
             <Store size={20} />
             Market
           </button>
           <button
             className={`flex flex-col items-center justify-center text-[11px] font-medium ${
-              isMobileSearchOpen ? 'text-gray-900' : 'text-gray-500'
+              isMobileSearchOpen || activeNav === 'search' ? 'text-gray-900' : 'text-gray-500'
             }`}
-            onClick={() => setIsMobileSearchOpen(true)}
+            onClick={() => {
+              setActiveNav('search');
+              setIsMobileSearchOpen((prev) => !prev);
+              if (isMobileSearchOpen) {
+                setIsMobileSearchFocused(false);
+              }
+            }}
           >
             <Search size={20} />
             Search
           </button>
-          <button className="relative flex flex-col items-center justify-center text-[11px] font-medium text-gray-500">
+          <button
+            className={`relative flex flex-col items-center justify-center text-[11px] font-medium ${activeNav === 'cart' ? 'text-gray-900' : 'text-gray-500'}`}
+            onClick={() => setActiveNav('cart')}
+          >
             <ShoppingCart size={20} />
             Cart
             {cartCount > 0 && (
@@ -223,7 +240,10 @@ export function Header({
               </span>
             )}
           </button>
-          <button className="flex flex-col items-center justify-center text-[11px] font-medium text-gray-500">
+          <button
+            className={`flex flex-col items-center justify-center text-[11px] font-medium ${activeNav === 'menu' ? 'text-gray-900' : 'text-gray-500'}`}
+            onClick={() => setActiveNav('menu')}
+          >
             <Menu size={20} />
             Menu
           </button>

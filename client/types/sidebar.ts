@@ -12,4 +12,5 @@ export interface SidebarFiltersProps {
   onPriceChange: (min: number, max: number) => void;
   onClearAll: () => void;
   onClose?: () => void;
+  isMobileFullscreen?: boolean;
 }
